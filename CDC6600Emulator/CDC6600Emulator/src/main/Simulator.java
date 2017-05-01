@@ -7,10 +7,13 @@ public class Simulator {
 		if(args.length<4)
 		{
 			//Error
+			System.out.println("Error");
 		}
 		else
 		{
 			//Innitialize
+			ScoreBoard sb = new ScoreBoard();
+			sb.start(args[0], args[1], args[2], args[3]);
 		}
 	}
 
