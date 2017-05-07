@@ -342,7 +342,6 @@ public class ScoreBoard {
 				}
 
 				workingInstructionIndex++;
-
 			}
 
 			for (InstructionPipeline finishedInstruction : finishedInstructionListTemp) {
