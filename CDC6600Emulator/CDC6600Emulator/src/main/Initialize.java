@@ -8,6 +8,8 @@ public class Initialize {
 	private static String ADDER = "FP ADDER";
 	private static String MULTIPLIER = "FP MULTIPLIER";
 	private static String DIVIDER = "FP DIVIDER";
+	private static String CACHE = "I-CACHE";
+	public static String CacheLine = "";
 
 	public static ArrayList<FunctionalUnit> initializeConfig(String filePath) {
 		ArrayList<FunctionalUnit> FUList = new ArrayList<FunctionalUnit>();
@@ -43,6 +45,9 @@ public class Initialize {
 					if (fUnit.equals(DIVIDER))
 						for (int i = 0; i < fUnitCount; i++)
 							diviFUList.add(new FunctionalUnit(FunctionalUnit.UnitType.DIVIDER, "D" + i, fCycleCount));
+					
+					if(fUnit.equals(CACHE))
+						CacheLine = fUnitCount+"#"+fCycleCount;
 
 				}
 				br.close();
@@ -51,6 +56,8 @@ public class Initialize {
 				FUList.addAll(multiFUList);
 				FUList.addAll(diviFUList);
 				FUList.add(new FunctionalUnit(FunctionalUnit.UnitType.INTEGER, "I0", 1));
+				FUList.add(new FunctionalUnit(FunctionalUnit.UnitType.DOUBLE, "DD0", 2));
+				FUList.add(new FunctionalUnit(FunctionalUnit.UnitType.WORD, "W0", 1));
 			} catch (Exception e) {
 
 			}

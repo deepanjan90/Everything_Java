@@ -1,7 +1,12 @@
 package main;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class Instruction {
 
+	private static AtomicInteger INSTRUCTION_ID_GENERATOR = new AtomicInteger(101);
+	
+	public int id;
 	public String fullInstruction;
 	public String instruction;
 	public String destination;
@@ -23,5 +28,6 @@ public class Instruction {
 		this.isJump = isJump;
 		this.isHalt = isHalt;
 		this.isUnconditional = isUnconditional;
+		this.id = INSTRUCTION_ID_GENERATOR.getAndIncrement();
 	}
 }

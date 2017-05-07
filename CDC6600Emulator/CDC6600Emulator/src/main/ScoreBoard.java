@@ -19,11 +19,11 @@ public class ScoreBoard {
 
 	public void start(String filePathConfig, String filePathInstruction, String filePathData, String filePathOutPut) {
 
-		setup(filePathConfig, filePathInstruction,filePathData);
+		setup(filePathConfig, filePathInstruction, filePathData);
 		run(filePathOutPut);
 	}
 
-	private void setup(String filePathConfig, String filePathInstruction,String filePathData) {
+	private void setup(String filePathConfig, String filePathInstruction, String filePathData) {
 		functionalUnitList = new ArrayList<FunctionalUnit>();
 		instructionList = new ArrayList<Instruction>();
 		ArrayList<String> variables = new ArrayList<String>();
@@ -44,7 +44,7 @@ public class ScoreBoard {
 			}
 
 			for (Instruction instruction : instructionList) {
-				if (!instruction.destination.equals("")) {
+				if (!instruction.destination.equals("") && !instruction.isUnconditional) {
 					if (!variables.contains(instruction.destination))
 						variables.add(instruction.destination);
 				}
@@ -105,16 +105,27 @@ public class ScoreBoard {
 		ArrayList<InstructionPipeline> workingInstructionList = new ArrayList<InstructionPipeline>();
 		ArrayList<InstructionPipeline> finishedInstructionList = new ArrayList<InstructionPipeline>();
 		Map<Integer, String> inProcessRegisters = new HashMap<Integer, String>();
+		ArrayList<Integer> instructionIdList = new ArrayList<Integer>();
+		InstructionCache instructionCache;
 		int clockCycle = 1;
 		boolean isFetchBusy = false;
 		boolean done = false;
+
+		for (Instruction instruction : instructionList) {
+			instructionIdList.add(instruction.id);
+		}
+
+		instructionCache = new InstructionCache(Integer.parseInt(Initialize.CacheLine.split("#")[0]),
+				Integer.parseInt(Initialize.CacheLine.split("#")[1]), instructionIdList, 3);
+
 		do {
 			// if (clockCycle > 33)
 			// break;
 
-			if (clockCycle == 49) {
+			if (clockCycle == 174) {
 				// BreakPoint
-				isFetchBusy = false;
+				// isFetchBusy = false;
+				clockCycle = clockCycle;
 			}
 
 			if (workingInstructionList.size() <= 0) {
@@ -126,7 +137,7 @@ public class ScoreBoard {
 			}
 
 			int workingInstructionIndex = 0;
-			InstructionPipeline finishedInstruction = null;
+			ArrayList<InstructionPipeline> finishedInstructionListTemp = new ArrayList<InstructionPipeline>();
 			while (workingInstructionList.size() > workingInstructionIndex) {
 				InstructionPipeline workingInstruction = workingInstructionList.get(workingInstructionIndex);
 
@@ -134,9 +145,13 @@ public class ScoreBoard {
 					// Not Stared Pipeline
 					// To push to fetch stage
 					if (!isFetchBusy) {
-						workingInstruction.Fetch(clockCycle);
-						inProcessRegisters.put(workingInstruction.id, workingInstruction.instruction.destination);
-						isFetchBusy = true;
+						if (instructionCache.IsPresentForFetch(workingInstruction.instruction.id)) {
+							workingInstruction.Fetch(clockCycle);
+							inProcessRegisters.put(workingInstruction.id, workingInstruction.instruction.destination);
+							isFetchBusy = true;
+						}
+					} else {
+
 					}
 					break;
 				} else if (workingInstruction.stageType == StageType.FETCH) {
@@ -146,21 +161,43 @@ public class ScoreBoard {
 					// check if Integer Unit free
 					String integerUnitId = CheckAndGetIdFreeUnit(workingInstruction.functionalUnitType);
 
-					if (!integerUnitId.equals("")) {
+					boolean hazardFlag = false;
+
+					HashMap<Integer, String> registerWithoutCurrent = new HashMap<>(inProcessRegisters);
+					registerWithoutCurrent.keySet().removeIf(o -> o.intValue() >= workingInstruction.id);
+
+					if (registerWithoutCurrent.containsValue(workingInstruction.instruction.destination)) {
+						// WAW Hazard
+						if (!workingInstruction.instruction.isJump) {
+							workingInstruction.MarkWAW();
+							hazardFlag = true;
+						}
+					}
+
+					if ((!integerUnitId.equals("") && !hazardFlag) || workingInstruction.instruction.isJump) {
 						// Integer Unit Available
 						workingInstruction.Issue(clockCycle);
-						workingInstruction.SetFunctionUnit(
-								functionalUnitList.stream().filter(o -> o.id.equals(integerUnitId)).findFirst().get());
-						workingInstruction.functionalUnit.UpdateStatusToUsing();
+						if (!workingInstruction.instruction.isJump) {
+							workingInstruction.SetFunctionUnit(functionalUnitList.stream()
+									.filter(o -> o.id.equals(integerUnitId)).findFirst().get());
+							workingInstruction.functionalUnit.UpdateStatusToUsing();
+						}
 						isFetchBusy = false;
 
 						if (workingInstruction.instruction.isHalt) {
 							// Halt Instruction
 
-							InstructionPipeline tempToCheckBrach = workingInstructionList
-									.get(workingInstructionIndex - 1);
-							if (tempToCheckBrach.instruction.isJump) {
-								if (tempToCheckBrach.branchtaken) {
+							InstructionPipeline tempToCheckBranch = null;
+							int tempId = workingInstruction.id - 1;
+							
+							if (workingInstructionList.stream().filter(o->o.id==tempId).count()>0) {
+								tempToCheckBranch = workingInstructionList.get(workingInstructionIndex - 1);
+							} else if (finishedInstructionList.stream().filter(o->o.id==tempId).count()>0){
+								tempToCheckBranch = finishedInstructionList.stream().filter(o->o.id==tempId).findFirst().get();
+							}
+
+							if (tempToCheckBranch!=null && tempToCheckBranch.instruction.isJump) {
+								if (tempToCheckBranch.branchtaken) {
 									workingInstruction.Issue(0);
 								} else {
 									workingInstruction.Issue(clockCycle);
@@ -181,6 +218,9 @@ public class ScoreBoard {
 							workingInstruction.MarkStruct();
 						}
 
+						if (instructionStartIndexMaster + 1 < instructionList.size())
+							instructionCache.IsPresentForFetch(instructionList.get(instructionStartIndexMaster + 1).id);
+
 					}
 				} else if (workingInstruction.stageType == StageType.ISSUE) {
 					// Pipeline in Issue
@@ -191,12 +231,23 @@ public class ScoreBoard {
 					HashMap<Integer, String> registerWithoutCurrent = new HashMap<>(inProcessRegisters);
 					registerWithoutCurrent.keySet().removeIf(o -> o.intValue() >= workingInstruction.id);
 
-					if (registerWithoutCurrent.containsValue(workingInstruction.instruction.destination)) {
-						// WAW Hazard
-						workingInstruction.MarkWAW();
-						hazardFlag = true;
-					}
+					if (workingInstruction.instruction.isJump && !workingInstruction.instruction.isUnconditional) {
+						if (registerWithoutCurrent.containsValue(workingInstruction.instruction.source1)
+								|| registerWithoutCurrent.containsValue(workingInstruction.instruction.destination)) {
 
+							// RAW Hazard
+							workingInstruction.MarkRAW();
+							hazardFlag = true;
+						}
+					} else {
+						if (registerWithoutCurrent.containsValue(workingInstruction.instruction.source1)
+								|| registerWithoutCurrent.containsValue(workingInstruction.instruction.source2)) {
+
+							// RAW Hazard
+							workingInstruction.MarkRAW();
+							hazardFlag = true;
+						}
+					}
 					if (registerWithoutCurrent.containsValue(workingInstruction.instruction.source1)
 							|| registerWithoutCurrent.containsValue(workingInstruction.instruction.source2)) {
 
@@ -215,10 +266,11 @@ public class ScoreBoard {
 							if (workingInstruction.instruction.isUnconditional) {
 								// Jump Instruction Unconditional
 								String label = workingInstruction.instruction.source1;
-								instructionStartIndexMaster = instructionList.indexOf(instructionList.stream()
-										.filter(o -> o.label.equals(label)).findFirst().get()) - 1;
+								instructionStartIndexMaster = instructionList.indexOf(
+										instructionList.stream().filter(o -> o.label.equals(label)).findFirst().get())
+										- 1;
 								workingInstruction.branchtaken = true;
-								
+
 							} else {
 								// Jump Instruction Conditional
 
@@ -265,13 +317,15 @@ public class ScoreBoard {
 
 				} else if (workingInstruction.stageType == StageType.WRITE) {
 					// resetting functional Unit
-					workingInstruction.functionalUnit.ResetUnit();
+					if (workingInstruction.functionalUnit != null) {
+						workingInstruction.functionalUnit.ResetUnit();
+					}
 
 					// Adding to finished list
 					finishedInstructionList.add(workingInstruction);
 
 					// Marking for removal from working List
-					finishedInstruction = workingInstruction;
+					finishedInstructionListTemp.add(workingInstruction);
 
 					// Clearing inProcessRegisters
 					inProcessRegisters.remove(workingInstruction.id);
@@ -291,8 +345,10 @@ public class ScoreBoard {
 
 			}
 
-			workingInstructionList.remove(finishedInstruction);
-
+			for (InstructionPipeline finishedInstruction : finishedInstructionListTemp) {
+				workingInstructionList.remove(finishedInstruction);
+			}
+			
 			clockCycle++;
 
 			System.out.println(
@@ -334,12 +390,12 @@ public class ScoreBoard {
 		});
 		;
 
-		System.out.println("Instruction \t Fetch \t Issue \t Read \t Exec \t Write \t RAW \t WAW \t Struct");
+		System.out.println("ID \t Instruction \t\t\tStatus Fetch \tIssue \tRead \tExec \tWrite \tRAW \tWAW \tStruct");
 		for (InstructionPipeline ip : finishedInstructionList) {
 			WriteInstructionPipelineStage(ip);
 		}
-		
-		WriteToOutputFile(finishedInstructionList,filePathOutPut);
+
+		WriteToOutputFile(finishedInstructionList, filePathOutPut);
 
 	}
 
@@ -466,24 +522,25 @@ public class ScoreBoard {
 				+ instructionPipeline.waw + "\t" + instructionPipeline.struct + "\t");
 	}
 
-	public void WriteToOutputFile(ArrayList<InstructionPipeline> outputList,String filePathOutPut){
+	public void WriteToOutputFile(ArrayList<InstructionPipeline> outputList, String filePathOutPut) {
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(filePathOutPut))) {
 
 			bw.write("Instruction \t Fetch \t Issue \t Read \t Exec \t Write \t RAW \t WAW \t Struct");
 			bw.newLine();
 			for (InstructionPipeline instructionPipeline : outputList) {
-				bw.write(instructionPipeline.instruction.fullInstruction + "\t" 	+ instructionPipeline.fetch + "\t" + instructionPipeline.issue + "\t" + instructionPipeline.read + "\t"
-				+ instructionPipeline.exec + "\t" + instructionPipeline.write + "\t" + instructionPipeline.raw + "\t"
-				+ instructionPipeline.waw + "\t" + instructionPipeline.struct);
+				bw.write(instructionPipeline.instruction.fullInstruction + "\t" + instructionPipeline.fetch + "\t"
+						+ instructionPipeline.issue + "\t" + instructionPipeline.read + "\t" + instructionPipeline.exec
+						+ "\t" + instructionPipeline.write + "\t" + instructionPipeline.raw + "\t"
+						+ instructionPipeline.waw + "\t" + instructionPipeline.struct);
 				bw.newLine();
 			}
-			
+
 			String content = "This is the content to write into file\n";
 
 			bw.write(content);
 
 			// no need to close it.
-			//bw.close();
+			// bw.close();
 
 			System.out.println("Done");
 

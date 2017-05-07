@@ -10,8 +10,8 @@ public class InstructionPipeline {
 	public enum StageType {
 		NS, ISSUE, FETCH, READ, EXEC, WRITE
 	};
-	
-	private static AtomicInteger ID_GENERATOR = new AtomicInteger(1001);
+
+	private static AtomicInteger INSTRUCTIONPIPELINE_ID_GENERATOR = new AtomicInteger(1001);
 
 	int id;
 	StageType stageType;
@@ -36,7 +36,7 @@ public class InstructionPipeline {
 		this.raw = 'N';
 		this.waw = 'N';
 		this.struct = 'N';
-		this.id = ID_GENERATOR.getAndIncrement();
+		this.id = INSTRUCTIONPIPELINE_ID_GENERATOR.getAndIncrement();
 		this.branchtaken = false;
 	}
 
@@ -48,6 +48,10 @@ public class InstructionPipeline {
 			unitType = UnitType.MULTIPLIER;
 		} else if (instruction.equals("DIV.D")) {
 			unitType = UnitType.DIVIDER;
+		} else if (instruction.equals("L.D") || instruction.equals("S.D")) {
+			unitType = UnitType.DOUBLE;
+		} else if (instruction.equals("L.W") || instruction.equals("S.W")) {
+			unitType = UnitType.WORD;
 		}
 		return unitType;
 	}
@@ -82,7 +86,9 @@ public class InstructionPipeline {
 	public void Execute(int clockCycle) {
 		this.stageType = StageType.EXEC;
 		this.exec = clockCycle;
-		this.UpdateExecute(clockCycle);
+		if (this.functionalUnit != null) {
+			this.UpdateExecute(clockCycle);
+		}
 	}
 
 	public void UpdateExecute(int clockCycle) {

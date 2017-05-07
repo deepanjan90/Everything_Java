@@ -2,7 +2,7 @@ package main;
 
 public class FunctionalUnit {
 	public enum UnitType {
-		INTEGER, ADDER, MULTIPLIER, DIVIDER
+		INTEGER, ADDER, MULTIPLIER, DIVIDER, DOUBLE, WORD
 	};
 
 	public UnitType type;
