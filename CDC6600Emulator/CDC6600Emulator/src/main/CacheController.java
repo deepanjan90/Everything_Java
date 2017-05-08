@@ -9,16 +9,18 @@ public class CacheController {
 	private boolean iCacheRequestPresent = false;
 	private boolean dCacheActive = false;
 	private boolean dCacheRequestPresent = false;
+	public int iCacheMissCount = 0;
+	public int dCacheMissCount = 0;
 
 	public CacheController(InstructionCache instructionCache, DataCache dataCache) {
 		this.instructionCache = instructionCache;
 		this.dataCache = dataCache;
 	}
-	
-	public boolean IsIcacheActive(){
+
+	public boolean IsIcacheActive() {
 		return iCacheActive;
 	}
-	
+
 	public boolean IsInstructionPresent(int instructionId) {
 		boolean isPresent = true;
 		isPresent = instructionCache.IsPresent(instructionId);
@@ -26,7 +28,7 @@ public class CacheController {
 			queuedInstructionForFetch = instructionId;
 			iCacheRequestPresent = true;
 		} else {
-			queuedInstructionForFetch = 0;			
+			queuedInstructionForFetch = 0;
 		}
 		return isPresent;
 	}
@@ -38,18 +40,20 @@ public class CacheController {
 			queuedDataForFetch = dataId;
 			dCacheRequestPresent = true;
 		} else {
-			queuedDataForFetch = 0;			
+			queuedDataForFetch = 0;
 		}
 		return isPresent;
 	}
-	
+
 	public void UpdateCaching() {
 
 		if (!iCacheActive && !dCacheActive) {
 			if (iCacheRequestPresent) {
 				iCacheActive = true;
+				iCacheMissCount += 1;
 			} else if (dCacheRequestPresent) {
 				dCacheActive = true;
+				dCacheMissCount += 1;
 			}
 		}
 
@@ -64,7 +68,7 @@ public class CacheController {
 				}*/
 			}
 		}
-		
+
 		if (dCacheActive) {
 			dataCache.GetDataBlock(queuedDataForFetch);
 			if (dataCache.IsPresent(queuedDataForFetch)) {

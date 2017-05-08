@@ -45,9 +45,9 @@ public class Initialize {
 					if (fUnit.equals(DIVIDER))
 						for (int i = 0; i < fUnitCount; i++)
 							diviFUList.add(new FunctionalUnit(FunctionalUnit.UnitType.DIVIDER, "D" + i, fCycleCount));
-					
-					if(fUnit.equals(CACHE))
-						CacheLine = fUnitCount+"#"+fCycleCount;
+
+					if (fUnit.equals(CACHE))
+						CacheLine = fUnitCount + "#" + fCycleCount;
 
 				}
 				br.close();
@@ -74,8 +74,7 @@ public class Initialize {
 			// continue
 			try {
 				BufferedReader br = new BufferedReader(new FileReader(filePath));
-				String line, subLine, fUnit, jLabel, instructionLine, fullInstruction, instruction, destination,
-						source1, source2;
+				String line, jLabel, instructionLine, fullInstruction, instruction, destination, source1, source2;
 				String lineArr[];
 				boolean isJump, isHalt, isUnconditional;
 
@@ -92,7 +91,7 @@ public class Initialize {
 					isJump = false;
 					isHalt = false;
 					isUnconditional = false;
-					
+
 					line = line.toUpperCase();
 
 					if (line.trim().split(":").length > 1) {
@@ -156,12 +155,24 @@ public class Initialize {
 		return instructionList;
 	}
 
-	public static void initializeData(String filePath) {
+	public static ArrayList<Integer> initializeData(String filePath) {
+		ArrayList<Integer> dataList = new ArrayList<Integer>();
 		if (!checkFile(filePath)) {
 			// no/empty file
 		} else {
 			// continue
+			try {
+				BufferedReader br = new BufferedReader(new FileReader(filePath));
+				String line;
+				while ((line = br.readLine()) != null) {
+					dataList.add(Integer.parseInt(line, 2));
+				}
+				br.close();
+			} catch (Exception e) {
+
+			}
 		}
+		return dataList;
 	}
 
 	public static void initializeResult(String filePath) {

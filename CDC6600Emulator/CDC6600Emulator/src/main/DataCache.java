@@ -12,23 +12,11 @@ public class DataCache {
 	ArrayList<Set> setList;
 
 	private class Set {
-
 		ArrayList<Block> blockList = new ArrayList<Block>();
-		int blockCount;
-
-		Set(int blockCount) {
-			this.blockCount = blockCount;
-		}
-
 	}
 
 	private class Block {
 		ArrayList<Integer> wordList = new ArrayList<Integer>();
-		int wordCount;
-
-		Block(int wordCount) {
-			this.wordCount = wordCount;
-		}
 	}
 
 	DataCache(int blockPerSet, int wordsPerBlock, int setPerCache, int clockCyclePerWordFetch) {
@@ -43,7 +31,7 @@ public class DataCache {
 	private void Configure() {
 		setList = new ArrayList<>();
 		for (int i = 0; i < setPerCache; i++) {
-			setList.add(new Set(blockPerSet));
+			setList.add(new Set());
 		}
 	}
 
@@ -72,18 +60,18 @@ public class DataCache {
 		return (dataId / wordsPerBlock) % 2;
 	}
 
-	public void UpdateLRUBlock(Set set, Block block){
+	public void UpdateLRUBlock(Set set, Block block) {
 		set.blockList.remove(block);
 		set.blockList.add(block);
 	}
-	
+
 	public void GetDataBlock(int dataId) {
 		clockCycleUsed += 1;
 		if (clockCycleUsed == clockCyclePerWordFetch * wordsPerBlock) {
 			clockCycleUsed = 0;
 			Set set = setList.get(GetSeTLocation(dataId));
 			int startDataId = dataId - GetWordLocation(dataId);
-			Block block = new Block(wordsPerBlock);
+			Block block = new Block();
 			for (int i = startDataId; i < startDataId + wordsPerBlock; i++) {
 				block.wordList.add(i);
 			}
@@ -92,7 +80,7 @@ public class DataCache {
 				set.blockList.add(block);
 			} else {
 				// eviction to be performed
-				
+
 				set.blockList.remove(0);
 				set.blockList.add(block);
 			}
@@ -100,14 +88,14 @@ public class DataCache {
 			// still working
 		}
 	}
-	
-	public void View(){
+
+	public void View() {
 		for (Set set : setList) {
 			System.out.println("###################");
 			for (Block block : set.blockList) {
 				System.out.println("******************");
 				for (int word : block.wordList) {
-					System.out.print(word+"\t");
+					System.out.print(word + "\t");
 				}
 				System.out.println("\n******************");
 			}

@@ -8,13 +8,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import main.FunctionalUnit.UnitType;
 import main.InstructionPipeline.StageType;
 
 public class ScoreBoard {
 
 	private ArrayList<FunctionalUnit> functionalUnitList = new ArrayList<FunctionalUnit>();
 	private ArrayList<Instruction> instructionList = new ArrayList<Instruction>();
+	private ArrayList<Integer> dataList = new ArrayList<Integer>();
 	private HashMap<String, Integer> variablesMap = new HashMap<String, Integer>();
 
 	public void start(String filePathConfig, String filePathInstruction, String filePathData, String filePathOutPut) {
@@ -30,6 +30,7 @@ public class ScoreBoard {
 		try {
 			functionalUnitList = Initialize.initializeConfig(filePathConfig);
 			instructionList = Initialize.initializeInstructions(filePathInstruction);
+			dataList = Initialize.initializeData(filePathData);
 
 			for (FunctionalUnit functionalUnit : functionalUnitList) {
 				System.out.println("Id: " + functionalUnit.id + " , type: " + functionalUnit.type + " , lat: "
@@ -41,6 +42,10 @@ public class ScoreBoard {
 				System.out.println(instruction.instruction + "\t" + instruction.destination + "\t" + instruction.source1
 						+ "\t" + instruction.source2 + "\t" + instruction.label + "\t" + instruction.isJump + "\t"
 						+ instruction.isUnconditional + "\t" + instruction.fullInstruction);
+			}
+
+			for (int data : dataList) {
+				System.out.println(data);
 			}
 
 			for (Instruction instruction : instructionList) {
@@ -100,8 +105,6 @@ public class ScoreBoard {
 
 	private void run(String filePathOutPut) {
 		int instructionStartIndexMaster = 0;
-		int instructionEndIndex = -1;
-		ArrayList<String> workingRegisters;
 		ArrayList<InstructionPipeline> workingInstructionList = new ArrayList<InstructionPipeline>();
 		ArrayList<InstructionPipeline> finishedInstructionList = new ArrayList<InstructionPipeline>();
 		Map<Integer, String> inProcessRegisters = new HashMap<Integer, String>();
@@ -113,13 +116,21 @@ public class ScoreBoard {
 		boolean isFetchBusy = false;
 		boolean done = false;
 
+		int dataCacheAccessCount = 0;
+		int instructionCacheAccessCount = 0;
+
+		int clockCyclePerWordFetch = 3;
+		int blockPerSet = 2;
+		int wordsPerBlock = 4;
+		int setPerCache = 2;
+
 		for (Instruction instruction : instructionList) {
 			instructionIdList.add(instruction.id);
 		}
 
 		instructionCache = new InstructionCache(Integer.parseInt(Initialize.CacheLine.split("#")[0]),
-				Integer.parseInt(Initialize.CacheLine.split("#")[1]), instructionIdList, 3);
-		dataCache = new DataCache(2, 4, 2, 3);
+				Integer.parseInt(Initialize.CacheLine.split("#")[1]), instructionIdList, clockCyclePerWordFetch);
+		dataCache = new DataCache(blockPerSet, wordsPerBlock, setPerCache, clockCyclePerWordFetch);
 		cacheController = new CacheController(instructionCache, dataCache);
 
 		do {
@@ -128,8 +139,6 @@ public class ScoreBoard {
 
 			if (clockCycle == 157) {
 				// BreakPoint
-				// isFetchBusy = false;
-				clockCycle = clockCycle;
 			}
 
 			if (workingInstructionList.size() <= 0) {
@@ -157,6 +166,14 @@ public class ScoreBoard {
 										workingInstruction.instruction.destination);
 							}
 							isFetchBusy = true;
+							instructionCacheAccessCount++;
+							if (workingInstruction.instruction.instruction.equals("SW")
+									|| workingInstruction.instruction.instruction.equals("LW")) {
+								dataCacheAccessCount++;
+							} else if (workingInstruction.instruction.instruction.equals("S.D")
+									|| workingInstruction.instruction.instruction.equals("L.D")) {
+								dataCacheAccessCount += 2;
+							}
 						}
 					} else {
 
@@ -356,6 +373,11 @@ public class ScoreBoard {
 							int dataId = address / 4;
 
 							if (cacheController.IsDataPresent(dataId)) {
+								if (workingInstruction.read + 2 == clockCycle && cacheController.IsIcacheActive()) {
+									// Compensating for 1st hit during icache
+									workingInstruction.UpdateExecute(clockCycle);
+								}
+
 								if (cacheController.IsDataPresent(dataId + 1)) {
 									isOkToExecute = true;
 								}
@@ -490,7 +512,6 @@ public class ScoreBoard {
 
 			@Override
 			public int compare(InstructionPipeline o1, InstructionPipeline o2) {
-				// TODO Auto-generated method stub
 				return o1.id - o2.id;
 			}
 
@@ -502,9 +523,17 @@ public class ScoreBoard {
 			WriteInstructionPipelineStage(ip);
 		}
 
-		WriteToOutputFile(finishedInstructionList, filePathOutPut);
+		WriteToOutputFile(finishedInstructionList, filePathOutPut, instructionCacheAccessCount,
+				instructionCacheAccessCount - cacheController.iCacheMissCount, dataCacheAccessCount,
+				dataCacheAccessCount - cacheController.dCacheMissCount);
 
 		dataCache.View();
+
+		System.out.println(instructionCacheAccessCount);
+		System.out.println(dataCacheAccessCount);
+
+		System.out.println(cacheController.iCacheMissCount);
+		System.out.println(cacheController.dCacheMissCount);
 
 	}
 
@@ -534,31 +563,67 @@ public class ScoreBoard {
 			variablesMap.remove(instruction.destination);
 			variablesMap.put(instruction.destination, temp1);
 		} else if (instruction.instruction.equals("LW")) { // Load Word
-			/*if (instruction.source1.contains("(")) {
+			if (instruction.source1.contains("(")) {
 				temp1 = variablesMap.get(instruction.source1.split("\\(")[1].split("\\)")[0]);
 				temp2 = Integer.parseInt(instruction.source1.split("\\(")[0]);
+				temp3 = ((temp1 + temp2) / 4) - 64;
+				temp3 = dataList.get(temp3);
 				variablesMap.remove(instruction.destination);
-				variablesMap.put(instruction.destination, temp1 + temp2);
+				variablesMap.put(instruction.destination, temp3);
 			} else {
 				temp1 = variablesMap.get(instruction.source1);
+				temp2 = 0;
+				temp3 = ((temp1 + temp2) / 4) - 64;
+				temp3 = dataList.get(temp3);
 				variablesMap.remove(instruction.destination);
-				variablesMap.put(instruction.destination, temp1);
+				variablesMap.put(instruction.destination, temp3);
 			}
-			variablesMap.remove(instruction.destination);
-			variablesMap.put(instruction.destination, temp1);*/
 		} else if (instruction.instruction.equals("SW")) { // Store Word
-			/*if (instruction.source1.contains("(")) {
-			temp1 = variablesMap.get(instruction.source1.split("\\(")[1].split("\\)")[0]);
-			temp2 = Integer.parseInt(instruction.source1.split("\\(")[0]);
-			variablesMap.remove(instruction.destination);
-			variablesMap.put(instruction.destination, temp1 + temp2);
+			if (instruction.source1.contains("(")) {
+
+				temp1 = variablesMap.get(instruction.source1.split("\\(")[1].split("\\)")[0]);
+				temp2 = Integer.parseInt(instruction.source1.split("\\(")[0]);
+				temp3 = ((temp1 + temp2) / 4) - 64;
+
+				dataList.set(temp3, variablesMap.get(instruction.destination));
 			} else {
-			temp1 = variablesMap.get(instruction.source1);
-			variablesMap.remove(instruction.destination);
-			variablesMap.put(instruction.destination, temp1);
+				temp1 = variablesMap.get(instruction.source1);
+				temp2 = 0;
+				temp3 = ((temp1 + temp2) / 4) - 64;
+
+				dataList.set(temp3, variablesMap.get(instruction.destination));
 			}
-			variablesMap.remove(instruction.destination);
-			variablesMap.put(instruction.destination, temp1);*/
+		} else if (instruction.instruction.equals("L.D")) { // Load Double
+			if (instruction.source1.contains("(")) {
+				temp1 = variablesMap.get(instruction.source1.split("\\(")[1].split("\\)")[0]);
+				temp2 = Integer.parseInt(instruction.source1.split("\\(")[0]);
+				temp3 = ((temp1 + temp2) / 4) - 64;
+				temp3 = dataList.get(temp3);
+				variablesMap.remove(instruction.destination);
+				variablesMap.put(instruction.destination, temp3);
+			} else {
+				temp1 = variablesMap.get(instruction.source1);
+				temp2 = 0;
+				temp3 = ((temp1 + temp2) / 4) - 64;
+				temp3 = dataList.get(temp3);
+				variablesMap.remove(instruction.destination);
+				variablesMap.put(instruction.destination, temp3);
+			}
+		} else if (instruction.instruction.equals("S.D")) { // Store Word
+			if (instruction.source1.contains("(")) {
+
+				temp1 = variablesMap.get(instruction.source1.split("\\(")[1].split("\\)")[0]);
+				temp2 = Integer.parseInt(instruction.source1.split("\\(")[0]);
+				temp3 = ((temp1 + temp2) / 4) - 64;
+
+				dataList.set(temp3, variablesMap.get(instruction.destination));
+			} else {
+				temp1 = variablesMap.get(instruction.source1);
+				temp2 = 0;
+				temp3 = ((temp1 + temp2) / 4) - 64;
+
+				dataList.set(temp3, variablesMap.get(instruction.destination));
+			}
 		} else if (instruction.instruction.equals("DSUB")) { // DSUB
 			temp1 = variablesMap.get(instruction.source1);
 			temp2 = variablesMap.get(instruction.source2);
@@ -631,25 +696,35 @@ public class ScoreBoard {
 				+ instructionPipeline.waw + "\t" + instructionPipeline.struct + "\t");
 	}
 
-	public void WriteToOutputFile(ArrayList<InstructionPipeline> outputList, String filePathOutPut) {
+	public void WriteToOutputFile(ArrayList<InstructionPipeline> outputList, String filePathOutPut,
+			int iCacheRequestCount, int iCacheHit, int dCacheRequestCount, int dCacheHit) {
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(filePathOutPut))) {
 
-			bw.write("Instruction \t Fetch \t Issue \t Read \t Exec \t Write \t RAW \t WAW \t Struct");
+			bw.write("Instruction \t\t Fetch \t Issue \t Read \t Exec \t Write \t RAW \t WAW \t Struct");
 			bw.newLine();
 			for (InstructionPipeline instructionPipeline : outputList) {
-				bw.write(instructionPipeline.instruction.fullInstruction + "\t" + instructionPipeline.fetch + "\t"
-						+ instructionPipeline.issue + "\t" + instructionPipeline.read + "\t" + instructionPipeline.exec
-						+ "\t" + instructionPipeline.write + "\t" + instructionPipeline.raw + "\t"
-						+ instructionPipeline.waw + "\t" + instructionPipeline.struct);
+				bw.write((instructionPipeline.instruction.fullInstruction.length() > 15
+						? instructionPipeline.instruction.fullInstruction + "\t"
+						: (instructionPipeline.instruction.fullInstruction.length() > 7
+								? instructionPipeline.instruction.fullInstruction + "\t\t"
+								: instructionPipeline.instruction.fullInstruction + "\t\t\t"))
+						+ GetSpaceIfZero(instructionPipeline.fetch) + "\t" + GetSpaceIfZero(instructionPipeline.issue)
+						+ "\t" + GetSpaceIfZero(instructionPipeline.read) + "\t"
+						+ GetSpaceIfZero(instructionPipeline.exec) + "\t" + GetSpaceIfZero(instructionPipeline.write)
+						+ "\t" + instructionPipeline.raw + "\t" + instructionPipeline.waw + "\t"
+						+ instructionPipeline.struct);
 				bw.newLine();
+
 			}
 
-			String content = "This is the content to write into file\n";
-
-			bw.write(content);
-
-			// no need to close it.
-			// bw.close();
+			bw.newLine();
+			bw.write("Total number of access requests for instruction cache: " + iCacheRequestCount);
+			bw.newLine();
+			bw.write("Number of instruction cache hits: " + iCacheHit);
+			bw.newLine();
+			bw.write("Total number of access requests for data cache: " + dCacheRequestCount);
+			bw.newLine();
+			bw.write("Number of data cache hits: " + dCacheHit);
 
 			System.out.println("Done");
 
@@ -659,5 +734,9 @@ public class ScoreBoard {
 
 		}
 
+	}
+
+	private String GetSpaceIfZero(int num) {
+		return num == 0 ? " " : num + "";
 	}
 }
