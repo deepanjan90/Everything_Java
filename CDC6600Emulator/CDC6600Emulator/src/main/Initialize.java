@@ -56,8 +56,8 @@ public class Initialize {
 				FUList.addAll(multiFUList);
 				FUList.addAll(diviFUList);
 				FUList.add(new FunctionalUnit(FunctionalUnit.UnitType.INTEGER, "I0", 1));
-				FUList.add(new FunctionalUnit(FunctionalUnit.UnitType.DOUBLE, "DD0", 2));
-				FUList.add(new FunctionalUnit(FunctionalUnit.UnitType.WORD, "W0", 1));
+				FUList.add(new FunctionalUnit(FunctionalUnit.UnitType.LOADSTORE, "L0", 2));
+				FUList.add(new FunctionalUnit(FunctionalUnit.UnitType.JMPHLT, "J0", 1));
 			} catch (Exception e) {
 
 			}

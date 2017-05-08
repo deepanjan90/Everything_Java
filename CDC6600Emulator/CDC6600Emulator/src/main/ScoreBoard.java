@@ -51,7 +51,7 @@ public class ScoreBoard {
 
 				if (!instruction.source1.equals("")) {
 					if (instruction.source1.contains("R") || instruction.source1.contains("F")) {
-						if (instruction.source1.contains("\\(")) {
+						if (instruction.source1.contains("(")) {
 							if (!variables.contains(instruction.source1.split("\\(")[1].trim().split("\\)")[0].trim()))
 								variables.add(instruction.source1.split("\\(")[1].trim().split("\\)")[0].trim());
 						} else {
@@ -70,7 +70,7 @@ public class ScoreBoard {
 
 				if (!instruction.source2.equals("") && !instruction.isJump) {
 					if (instruction.source2.contains("R") || instruction.source2.contains("F")) {
-						if (instruction.source2.contains("\\(")) {
+						if (instruction.source2.contains("(")) {
 							if (!variables.contains(instruction.source2.split("\\(")[1].trim().split("\\)")[0].trim()))
 								variables.add(instruction.source2.split("\\(")[1].trim().split("\\)")[0].trim());
 						} else {
@@ -107,6 +107,8 @@ public class ScoreBoard {
 		Map<Integer, String> inProcessRegisters = new HashMap<Integer, String>();
 		ArrayList<Integer> instructionIdList = new ArrayList<Integer>();
 		InstructionCache instructionCache;
+		DataCache dataCache;
+		CacheController cacheController;
 		int clockCycle = 1;
 		boolean isFetchBusy = false;
 		boolean done = false;
@@ -117,12 +119,14 @@ public class ScoreBoard {
 
 		instructionCache = new InstructionCache(Integer.parseInt(Initialize.CacheLine.split("#")[0]),
 				Integer.parseInt(Initialize.CacheLine.split("#")[1]), instructionIdList, 3);
+		dataCache = new DataCache(2, 4, 2, 3);
+		cacheController = new CacheController(instructionCache, dataCache);
 
 		do {
 			// if (clockCycle > 33)
 			// break;
 
-			if (clockCycle == 174) {
+			if (clockCycle == 157) {
 				// BreakPoint
 				// isFetchBusy = false;
 				clockCycle = clockCycle;
@@ -145,9 +149,13 @@ public class ScoreBoard {
 					// Not Stared Pipeline
 					// To push to fetch stage
 					if (!isFetchBusy) {
-						if (instructionCache.IsPresentForFetch(workingInstruction.instruction.id)) {
+						if (cacheController.IsInstructionPresent(workingInstruction.instruction.id)) {
 							workingInstruction.Fetch(clockCycle);
-							inProcessRegisters.put(workingInstruction.id, workingInstruction.instruction.destination);
+							if (!workingInstruction.instruction.instruction.equals("SW")
+									&& !workingInstruction.instruction.instruction.equals("S.D")) {
+								inProcessRegisters.put(workingInstruction.id,
+										workingInstruction.instruction.destination);
+							}
 							isFetchBusy = true;
 						}
 					} else {
@@ -159,7 +167,7 @@ public class ScoreBoard {
 					// To push to issue stage
 
 					// check if Integer Unit free
-					String integerUnitId = CheckAndGetIdFreeUnit(workingInstruction.functionalUnitType);
+					String functionalUnitId = CheckAndGetIdFreeUnit(workingInstruction.functionalUnitType);
 
 					boolean hazardFlag = false;
 
@@ -168,20 +176,22 @@ public class ScoreBoard {
 
 					if (registerWithoutCurrent.containsValue(workingInstruction.instruction.destination)) {
 						// WAW Hazard
-						if (!workingInstruction.instruction.isJump) {
+						if (!workingInstruction.instruction.isJump
+								&& !workingInstruction.instruction.instruction.equals("S.D")
+								&& !workingInstruction.instruction.instruction.equals("SW")) {
 							workingInstruction.MarkWAW();
 							hazardFlag = true;
 						}
 					}
 
-					if ((!integerUnitId.equals("") && !hazardFlag) || workingInstruction.instruction.isJump) {
+					if ((!functionalUnitId.equals("") && !hazardFlag)) {
 						// Integer Unit Available
 						workingInstruction.Issue(clockCycle);
-						if (!workingInstruction.instruction.isJump) {
-							workingInstruction.SetFunctionUnit(functionalUnitList.stream()
-									.filter(o -> o.id.equals(integerUnitId)).findFirst().get());
-							workingInstruction.functionalUnit.UpdateStatusToUsing();
-						}
+						// if (!workingInstruction.instruction.isJump) {
+						workingInstruction.SetFunctionUnit(functionalUnitList.stream()
+								.filter(o -> o.id.equals(functionalUnitId)).findFirst().get());
+						workingInstruction.functionalUnit.UpdateStatusToUsing();
+						// }
 						isFetchBusy = false;
 
 						if (workingInstruction.instruction.isHalt) {
@@ -189,14 +199,15 @@ public class ScoreBoard {
 
 							InstructionPipeline tempToCheckBranch = null;
 							int tempId = workingInstruction.id - 1;
-							
-							if (workingInstructionList.stream().filter(o->o.id==tempId).count()>0) {
+
+							if (workingInstructionList.stream().filter(o -> o.id == tempId).count() > 0) {
 								tempToCheckBranch = workingInstructionList.get(workingInstructionIndex - 1);
-							} else if (finishedInstructionList.stream().filter(o->o.id==tempId).count()>0){
-								tempToCheckBranch = finishedInstructionList.stream().filter(o->o.id==tempId).findFirst().get();
+							} else if (finishedInstructionList.stream().filter(o -> o.id == tempId).count() > 0) {
+								tempToCheckBranch = finishedInstructionList.stream().filter(o -> o.id == tempId)
+										.findFirst().get();
 							}
 
-							if (tempToCheckBranch!=null && tempToCheckBranch.instruction.isJump) {
+							if (tempToCheckBranch != null && tempToCheckBranch.instruction.isJump) {
 								if (tempToCheckBranch.branchtaken) {
 									workingInstruction.Issue(0);
 								} else {
@@ -219,7 +230,8 @@ public class ScoreBoard {
 						}
 
 						if (instructionStartIndexMaster + 1 < instructionList.size())
-							instructionCache.IsPresentForFetch(instructionList.get(instructionStartIndexMaster + 1).id);
+							cacheController
+									.IsInstructionPresent(instructionList.get(instructionStartIndexMaster + 1).id);
 
 					}
 				} else if (workingInstruction.stageType == StageType.ISSUE) {
@@ -240,20 +252,32 @@ public class ScoreBoard {
 							hazardFlag = true;
 						}
 					} else {
-						if (registerWithoutCurrent.containsValue(workingInstruction.instruction.source1)
-								|| registerWithoutCurrent.containsValue(workingInstruction.instruction.source2)) {
+						String source1 = workingInstruction.instruction.source1;
+						String source2 = workingInstruction.instruction.source2;
+
+						if (source1.contains("(")) {
+							source1 = source1.split("\\(")[1].trim().split("\\)")[0].trim();
+						}
+
+						if (source2.contains("(")) {
+							source2 = source2.split("\\(")[1].trim().split("\\)")[0].trim();
+						}
+
+						if (workingInstruction.instruction.instruction.equals("S.D")
+								|| workingInstruction.instruction.instruction.equals("SW")) {
+							if (registerWithoutCurrent.containsValue(workingInstruction.instruction.destination)) {
+								// RAW Hazard
+								workingInstruction.MarkRAW();
+								hazardFlag = true;
+							}
+
+						} else if (registerWithoutCurrent.containsValue(source1)
+								|| registerWithoutCurrent.containsValue(source2)) {
 
 							// RAW Hazard
 							workingInstruction.MarkRAW();
 							hazardFlag = true;
 						}
-					}
-					if (registerWithoutCurrent.containsValue(workingInstruction.instruction.source1)
-							|| registerWithoutCurrent.containsValue(workingInstruction.instruction.source2)) {
-
-						// RAW Hazard
-						workingInstruction.MarkRAW();
-						hazardFlag = true;
 					}
 
 					if (!hazardFlag) {
@@ -298,15 +322,97 @@ public class ScoreBoard {
 					// Pipeline in Read
 					// To push to Execute stage
 
+					boolean isOkToExecute = true;
+
 					// Execution Start
-					workingInstruction.Execute(clockCycle);
+					if (workingInstruction.instruction.instruction.equals("L.D")) {
+						// Load Double
+						isOkToExecute = false;
+						String location = workingInstruction.instruction.source1;
+						if (location.contains("(")) {
+							String register = location.split("\\(")[1].trim().split("\\)")[0].trim();
+							int offSet = Integer.parseInt(location.split("\\(")[0].trim());
+							int address = variablesMap.get(register) + offSet;
+							int dataId = address / 4;
+
+							if (cacheController.IsDataPresent(dataId)) {
+								if (workingInstruction.read + 2 == clockCycle && cacheController.IsIcacheActive()) {
+									// Compensating for 1st hit during icache
+									workingInstruction.UpdateExecute(clockCycle);
+								}
+								if (cacheController.IsDataPresent(dataId + 1)) {
+									isOkToExecute = true;
+								}
+							}
+						}
+					} else if (workingInstruction.instruction.instruction.equals("S.D")) {
+						// Store Double
+						isOkToExecute = false;
+						String location = workingInstruction.instruction.source1;
+						if (location.contains("(")) {
+							String register = location.split("\\(")[1].trim().split("\\)")[0].trim();
+							int offSet = Integer.parseInt(location.split("\\(")[0].trim());
+							int address = variablesMap.get(register) + offSet;
+							int dataId = address / 4;
+
+							if (cacheController.IsDataPresent(dataId)) {
+								if (cacheController.IsDataPresent(dataId + 1)) {
+									isOkToExecute = true;
+								}
+							}
+						}
+					} else if (workingInstruction.instruction.instruction.equals("LW")) {
+						// Store Double
+						isOkToExecute = false;
+						String location = workingInstruction.instruction.source1;
+						if (location.contains("(")) {
+							String register = location.split("\\(")[1].trim().split("\\)")[0].trim();
+							int offSet = Integer.parseInt(location.split("\\(")[0].trim());
+							int address = variablesMap.get(register) + offSet;
+							int dataId = address / 4;
+
+							if (cacheController.IsDataPresent(dataId)) {
+								isOkToExecute = true;
+							}
+						}
+					} else if (workingInstruction.instruction.instruction.equals("SW")) {
+						// Store Double
+						isOkToExecute = false;
+						String location = workingInstruction.instruction.source1;
+						if (location.contains("(")) {
+							String register = location.split("\\(")[1].trim().split("\\)")[0].trim();
+							int offSet = Integer.parseInt(location.split("\\(")[0].trim());
+							int address = variablesMap.get(register) + offSet;
+							int dataId = address / 4;
+
+							if (cacheController.IsDataPresent(dataId)) {
+								isOkToExecute = true;
+							}
+						}
+					}
+
+					if (isOkToExecute) {
+						workingInstruction.Execute(clockCycle);
+					}
 
 				} else if (workingInstruction.stageType == StageType.EXEC) {
 					// Pipeline in Execute
 					// To push to Write stage
-
+					boolean isExecComplete = false;
 					// Execution Still not complete
-					if (!workingInstruction.functionalUnit.HasCompleted()) {
+
+					if (workingInstruction.instruction.instruction.equals("LW")
+							|| workingInstruction.instruction.instruction.equals("SW")) {
+						if (workingInstruction.functionalUnit.clockCycleUsed == 1) {
+							isExecComplete = true;
+						}
+					} else {
+						if (workingInstruction.functionalUnit.HasCompleted()) {
+							isExecComplete = true;
+						}
+					}
+
+					if (!isExecComplete) {
 						workingInstruction.UpdateExecute(clockCycle);
 					} else {
 						// Execution Complete
@@ -347,7 +453,9 @@ public class ScoreBoard {
 			for (InstructionPipeline finishedInstruction : finishedInstructionListTemp) {
 				workingInstructionList.remove(finishedInstruction);
 			}
-			
+
+			cacheController.UpdateCaching();
+
 			clockCycle++;
 
 			System.out.println(
@@ -395,6 +503,8 @@ public class ScoreBoard {
 		}
 
 		WriteToOutputFile(finishedInstructionList, filePathOutPut);
+
+		dataCache.View();
 
 	}
 
@@ -508,7 +618,7 @@ public class ScoreBoard {
 			temp1 = variablesMap.get(instruction.source1);
 			temp2 = variablesMap.get(instruction.source2);
 			variablesMap.remove(instruction.destination);
-			variablesMap.put(instruction.destination, temp1 / temp2);
+			variablesMap.put(instruction.destination, temp2 == 0 ? 0 : temp1 / temp2);
 		}
 	}
 

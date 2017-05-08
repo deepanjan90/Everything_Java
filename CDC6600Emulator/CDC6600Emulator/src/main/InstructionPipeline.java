@@ -48,10 +48,10 @@ public class InstructionPipeline {
 			unitType = UnitType.MULTIPLIER;
 		} else if (instruction.equals("DIV.D")) {
 			unitType = UnitType.DIVIDER;
-		} else if (instruction.equals("L.D") || instruction.equals("S.D")) {
-			unitType = UnitType.DOUBLE;
-		} else if (instruction.equals("L.W") || instruction.equals("S.W")) {
-			unitType = UnitType.WORD;
+		} else if (instruction.equals("L.D") || instruction.equals("S.D") || instruction.equals("LW") || instruction.equals("SW")) {
+			unitType = UnitType.LOADSTORE;
+		} else if (instruction.equals("BNE") || instruction.equals("BEQ") || instruction.equals("HLT")) {
+			unitType = UnitType.JMPHLT;
 		}
 		return unitType;
 	}

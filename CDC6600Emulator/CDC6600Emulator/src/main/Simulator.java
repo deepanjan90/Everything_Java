@@ -1,7 +1,5 @@
 package main;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 
 public class Simulator {
 
@@ -18,39 +16,32 @@ public class Simulator {
 			ScoreBoard sb = new ScoreBoard();
 			sb.start(args[0], args[1], args[2], args[3]);
 			
-			/*InstructionCache ic = new InstructionCache(3, 2, new ArrayList<Integer>(Arrays.asList(0,1,2,3,4,5,6,7,8,9)), 1);
-			System.out.println(ic.IsPresentForFetch(1));//a
-			ic.ShowCach();
-			System.out.println(ic.IsPresentForFetch(1));//a
-			System.out.println("#####");
-			System.out.println(ic.IsPresentForFetch(0));//a
-			ic.ShowCach();
-			System.out.println(ic.IsPresentForFetch(0));//a
-			System.out.println("#####");
-			System.out.println(ic.IsPresentForFetch(1));//a
-			ic.ShowCach();
-			System.out.println(ic.IsPresentForFetch(1));//a
-			System.out.println("#####");
-			System.out.println(ic.IsPresentForFetch(5));//c
-			ic.ShowCach();
-			System.out.println(ic.IsPresentForFetch(5));//a
-			System.out.println("#####");
-			System.out.println(ic.IsPresentForFetch(2));//b
-			ic.ShowCach();
-			System.out.println(ic.IsPresentForFetch(2));//a
-			System.out.println("#####");
-			System.out.println(ic.IsPresentForFetch(4));//c
-			ic.ShowCach();
-			System.out.println(ic.IsPresentForFetch(4));//a
-			System.out.println("#####");
-			System.out.println(ic.IsPresentForFetch(6));//d
-			ic.ShowCach();
-			System.out.println(ic.IsPresentForFetch(6));//a
-			System.out.println("#####");
-			System.out.println(ic.IsPresentForFetch(8));//e
-			ic.ShowCach();
-			System.out.println(ic.IsPresentForFetch(8));//a
-			System.out.println("#####");*/
+			/*DataCache dataCache = new DataCache(2, 4, 2, 3);
+			System.out.println(dataCache.IsPresent(64));
+			System.out.println("View");
+			dataCache.View();
+			for(int i=0;i<12;i++){dataCache.GetDataBlock(64);}
+			System.out.println("View");
+			dataCache.View();
+			System.out.println(dataCache.IsPresent(64));
+			
+			for(int i=0;i<12;i++){dataCache.GetDataBlock(68);}
+			System.out.println("View");
+			dataCache.View();
+			for(int i=0;i<12;i++){dataCache.GetDataBlock(72);}
+			System.out.println("View");
+			dataCache.View();
+			for(int i=0;i<12;i++){dataCache.GetDataBlock(76);}
+			System.out.println("View");
+			dataCache.View();
+
+			System.out.println(dataCache.IsPresent(64));
+			System.out.println("View");
+			dataCache.View();
+			
+			for(int i=0;i<12;i++){dataCache.GetDataBlock(80);}
+			System.out.println("View");
+			dataCache.View();*/
 		}
 	}
 

@@ -9,7 +9,6 @@ public class InstructionCache {
 	private int clockCycleUsed;
 	private ArrayList<Integer> instructionIdList;
 	private ArrayList<Integer> cache;
-	private boolean gettingInstruction;
 
 	public InstructionCache(int blockCount, int blockSize, ArrayList<Integer> instructionList,
 			int clockCyclePerWordFetch) {
@@ -19,49 +18,39 @@ public class InstructionCache {
 		this.clockCycleUsed = 0;
 		this.instructionIdList = instructionList;
 		this.cache = new ArrayList<Integer>();
-		this.gettingInstruction = false;
 	}
 
-	public boolean IsPresentForFetch(int instructionId) {
+	public boolean IsPresent(int instructionId) {
 		boolean isPresent = true;
-		if (!gettingInstruction) {
-			if (cache.contains(GetStartInstructionOfBlock(instructionId))) {
-				// HIT
-				isPresent = true;
-				MoveInstructionFromLRUCache(instructionId);
-			} else {
-				// MISS
-				isPresent = false;
-				GetInstructionBlock(instructionId);
-			}
+		if (cache.contains(GetStartInstructionOfBlock(instructionId))) {
+			// HIT
+			isPresent = true;
+			MoveInstructionFromLRUCache(instructionId);
 		} else {
-			// Still Bringing from cache
+			// MISS
 			isPresent = false;
-			GetInstructionBlock(instructionId);
 		}
 		return isPresent;
 	}
 
-	public void ShowCach()
-	{
+	public void ShowCach() {
 		for (Integer integer : cache) {
-			System.out.println("**"+integer);
+			System.out.println("**" + integer);
 		}
 	}
-	
-	private void GetInstructionBlock(int instructionId) {
+
+	public void GetInstructionBlock(int instructionId) {
 		clockCycleUsed += 1;
-		if (clockCycleUsed == clockCyclePerWordFetch*blockCount) {
-			gettingInstruction = false;
+		if (clockCycleUsed == clockCyclePerWordFetch * blockCount) {
 			clockCycleUsed = 0;
 			int startBlockIndex = GetStartInstructionOfBlock(instructionId);
 			if (cache.size() + 1 > blockCount) {
 				// Cache full
 
 				// Remove the Least recently used
-				RemoveLRUInstructionFromCache();				
+				RemoveLRUInstructionFromCache();
 			}
-			
+
 			// Load the new one into cache
 			LoadInstructionIntoCache(startBlockIndex);
 
@@ -97,10 +86,5 @@ public class InstructionCache {
 		int indexOfInstruction = instructionIdList.indexOf(instructionId);
 		int startBlockIndex = (indexOfInstruction / blockSize) * blockSize;
 		return startBlockIndex;
-	}
-
-	private int GetEndInstructionOfBlock(int startBlockIndex) {
-		int endBlockIndex = startBlockIndex + blockSize - 1;
-		return endBlockIndex;
 	}
 }
