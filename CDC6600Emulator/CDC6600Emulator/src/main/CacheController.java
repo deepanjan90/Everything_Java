@@ -33,9 +33,9 @@ public class CacheController {
 		return isPresent;
 	}
 
-	public boolean IsDataPresent(int dataId) {
+	public boolean IsDataPresent(int dataId, boolean isWrite) {
 		boolean isPresent = true;
-		isPresent = dataCache.IsPresent(dataId);
+		isPresent = dataCache.IsPresent(dataId, isWrite);
 		if (!isPresent) {
 			queuedDataForFetch = dataId;
 			dCacheRequestPresent = true;
@@ -71,7 +71,7 @@ public class CacheController {
 
 		if (dCacheActive) {
 			dataCache.GetDataBlock(queuedDataForFetch);
-			if (dataCache.IsPresent(queuedDataForFetch)) {
+			if (dataCache.IsPresent(queuedDataForFetch, false)) {
 				queuedDataForFetch = 0;
 				dCacheRequestPresent = false;
 				dCacheActive = false;

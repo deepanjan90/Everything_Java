@@ -17,6 +17,7 @@ public class DataCache {
 
 	private class Block {
 		ArrayList<Integer> wordList = new ArrayList<Integer>();
+		boolean isDirty = false;
 	}
 
 	DataCache(int blockPerSet, int wordsPerBlock, int setPerCache, int clockCyclePerWordFetch) {
@@ -35,14 +36,14 @@ public class DataCache {
 		}
 	}
 
-	public boolean IsPresent(int dataId) {
+	public boolean IsPresent(int dataId, boolean isWrite) {
 		boolean isPresent = false;
 		Set set = setList.get(GetSeTLocation(dataId));
 		if (set.blockList.size() > 0) {
 			for (Block block : set.blockList) {
 				if (block.wordList.contains(dataId)) {
 					isPresent = true;
-					UpdateLRUBlock(set, block);
+					UpdateLRUBlock(set, block, isWrite);
 					break;
 				}
 			}
@@ -60,12 +61,13 @@ public class DataCache {
 		return (dataId / wordsPerBlock) % 2;
 	}
 
-	public void UpdateLRUBlock(Set set, Block block) {
+	public void UpdateLRUBlock(Set set, Block block, boolean isWrite) {
 		set.blockList.remove(block);
+		block.isDirty = isWrite;
 		set.blockList.add(block);
 	}
 
-	public void GetDataBlock(int dataId) {
+	public void GetDataBlock(int dataId) {		
 		clockCycleUsed += 1;
 		if (clockCycleUsed == clockCyclePerWordFetch * wordsPerBlock) {
 			clockCycleUsed = 0;
@@ -80,9 +82,15 @@ public class DataCache {
 				set.blockList.add(block);
 			} else {
 				// eviction to be performed
-
-				set.blockList.remove(0);
-				set.blockList.add(block);
+				Block tempBlock = set.blockList.get(0);
+				if(tempBlock.isDirty)
+				{
+					set.blockList.remove(0);
+				} else {
+					set.blockList.remove(0);
+					set.blockList.add(block);
+				}
+				
 			}
 		} else {
 			// still working
@@ -91,12 +99,13 @@ public class DataCache {
 
 	public void View() {
 		for (Set set : setList) {
-			System.out.println("###################");
+			System.out.println("######### Set : "+setList.indexOf(set)+"##########");
 			for (Block block : set.blockList) {
-				System.out.println("******************");
+				System.out.println("********* Block : "+set.blockList.indexOf(block)+"*********");
 				for (int word : block.wordList) {
 					System.out.print(word + "\t");
 				}
+				System.out.println("Is Dirty : "+ block.isDirty);
 				System.out.println("\n******************");
 			}
 			System.out.println("###################");

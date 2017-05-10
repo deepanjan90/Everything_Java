@@ -352,12 +352,12 @@ public class ScoreBoard {
 							int address = variablesMap.get(register) + offSet;
 							int dataId = address / 4;
 
-							if (cacheController.IsDataPresent(dataId)) {
+							if (cacheController.IsDataPresent(dataId, false)) {
 								if (workingInstruction.read + 2 == clockCycle && cacheController.IsIcacheActive()) {
 									// Compensating for 1st hit during icache
 									workingInstruction.UpdateExecute(clockCycle);
 								}
-								if (cacheController.IsDataPresent(dataId + 1)) {
+								if (cacheController.IsDataPresent(dataId + 1, false)) {
 									isOkToExecute = true;
 								}
 							}
@@ -372,13 +372,13 @@ public class ScoreBoard {
 							int address = variablesMap.get(register) + offSet;
 							int dataId = address / 4;
 
-							if (cacheController.IsDataPresent(dataId)) {
+							if (cacheController.IsDataPresent(dataId, true)) {
 								if (workingInstruction.read + 2 == clockCycle && cacheController.IsIcacheActive()) {
 									// Compensating for 1st hit during icache
 									workingInstruction.UpdateExecute(clockCycle);
 								}
 
-								if (cacheController.IsDataPresent(dataId + 1)) {
+								if (cacheController.IsDataPresent(dataId + 1, true)) {
 									isOkToExecute = true;
 								}
 							}
@@ -393,7 +393,7 @@ public class ScoreBoard {
 							int address = variablesMap.get(register) + offSet;
 							int dataId = address / 4;
 
-							if (cacheController.IsDataPresent(dataId)) {
+							if (cacheController.IsDataPresent(dataId, false)) {
 								isOkToExecute = true;
 							}
 						}
@@ -407,7 +407,7 @@ public class ScoreBoard {
 							int address = variablesMap.get(register) + offSet;
 							int dataId = address / 4;
 
-							if (cacheController.IsDataPresent(dataId)) {
+							if (cacheController.IsDataPresent(dataId, true)) {
 								isOkToExecute = true;
 							}
 						}

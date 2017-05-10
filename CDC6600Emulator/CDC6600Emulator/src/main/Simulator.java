@@ -8,7 +8,7 @@ public class Simulator {
 		if(args.length<4)
 		{
 			//Error
-			System.out.println("Error");
+			System.out.println("Please provide 4 arguments containg paths of config, instruction data and output files respectively");
 		}
 		else
 		{
