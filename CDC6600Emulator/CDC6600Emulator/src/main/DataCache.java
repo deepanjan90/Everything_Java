@@ -99,16 +99,16 @@ public class DataCache {
 
 	public void View() {
 		for (Set set : setList) {
-			System.out.println("######### Set : "+setList.indexOf(set)+"##########");
+			System.out.println("################## Set : "+setList.indexOf(set)+" #####################");
 			for (Block block : set.blockList) {
-				System.out.println("********* Block : "+set.blockList.indexOf(block)+"*********");
+				System.out.println("****************** Block : "+set.blockList.indexOf(block)+" *******************");
 				for (int word : block.wordList) {
 					System.out.print(word + "\t");
 				}
 				System.out.println("Is Dirty : "+ block.isDirty);
-				System.out.println("\n******************");
+				System.out.println("\n************************************************");
 			}
-			System.out.println("###################");
+			System.out.println("################################################");
 		}
 	}
 }

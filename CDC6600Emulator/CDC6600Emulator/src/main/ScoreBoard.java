@@ -17,7 +17,7 @@ public class ScoreBoard {
 	private ArrayList<Integer> dataList = new ArrayList<Integer>();
 	private HashMap<String, Integer> variablesMap = new HashMap<String, Integer>();
 
-	public void start(String filePathConfig, String filePathInstruction, String filePathData, String filePathOutPut) {
+	public void start(String filePathInstruction, String filePathData,String filePathConfig, String filePathOutPut) {
 
 		setup(filePathConfig, filePathInstruction, filePathData);
 		run(filePathOutPut);
@@ -527,13 +527,19 @@ public class ScoreBoard {
 				instructionCacheAccessCount - cacheController.iCacheMissCount, dataCacheAccessCount,
 				dataCacheAccessCount - cacheController.dCacheMissCount);
 
+		System.out.println("");
+		System.out.println("Data Cache Status");
 		dataCache.View();
+		System.out.println("");
+		System.out.println("Instruction Cache Status");
+		instructionCache.View();
+		
+		System.out.println("");
+		System.out.println("Instruction Cache Access Count : "+instructionCacheAccessCount);
+		System.out.println("Data Cache Access Count : "+dataCacheAccessCount);
 
-		System.out.println(instructionCacheAccessCount);
-		System.out.println(dataCacheAccessCount);
-
-		System.out.println(cacheController.iCacheMissCount);
-		System.out.println(cacheController.dCacheMissCount);
+		System.out.println("Instruction Cache Miss Count : "+cacheController.iCacheMissCount);
+		System.out.println("DAata Cache Miss Count : "+cacheController.dCacheMissCount);
 
 	}
 
