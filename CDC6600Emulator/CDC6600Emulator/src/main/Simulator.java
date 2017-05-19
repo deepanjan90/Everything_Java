@@ -12,7 +12,7 @@ public class Simulator {
 		}
 		else
 		{
-			//Innitialize
+			//Innitialize	
 			ScoreBoard sb = new ScoreBoard();
 			sb.start(args[0], args[1], args[2], args[3]);
 		}

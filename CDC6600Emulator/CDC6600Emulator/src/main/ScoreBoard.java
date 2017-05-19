@@ -20,7 +20,7 @@ public class ScoreBoard {
 	public void start(String filePathInstruction, String filePathData,String filePathConfig, String filePathOutPut) {
 
 		setup(filePathConfig, filePathInstruction, filePathData);
-		run(filePathOutPut);
+		run(filePathOutPut,filePathData);
 	}
 
 	private void setup(String filePathConfig, String filePathInstruction, String filePathData) {
@@ -103,7 +103,7 @@ public class ScoreBoard {
 		}
 	}
 
-	private void run(String filePathOutPut) {
+	private void run(String filePathOutPut, String filePathData) {
 		int instructionStartIndexMaster = 0;
 		ArrayList<InstructionPipeline> workingInstructionList = new ArrayList<InstructionPipeline>();
 		ArrayList<InstructionPipeline> finishedInstructionList = new ArrayList<InstructionPipeline>();
@@ -137,8 +137,9 @@ public class ScoreBoard {
 			// if (clockCycle > 33)
 			// break;
 
-			if (clockCycle == 157) {
+			if (clockCycle == 182) {
 				// BreakPoint
+				boolean dfg = true;
 			}
 
 			if (workingInstructionList.size() <= 0) {
@@ -237,6 +238,36 @@ public class ScoreBoard {
 							workingInstruction.Execute(0); // No execute Cycle
 							workingInstruction.Write(0); // No write Cycle
 							workingInstruction.stageType = StageType.WRITE;
+						} else {
+							{
+								// everything other than halt Instruction
+
+								InstructionPipeline tempToCheckBranch = null;
+								int tempId = workingInstruction.id - 1;
+
+								if (workingInstructionList.stream().filter(o -> o.id == tempId).count() > 0) {
+									tempToCheckBranch = workingInstructionList.get(workingInstructionIndex - 1);
+								} else if (finishedInstructionList.stream().filter(o -> o.id == tempId).count() > 0) {
+									tempToCheckBranch = finishedInstructionList.stream().filter(o -> o.id == tempId)
+											.findFirst().get();
+								}
+
+								if (tempToCheckBranch != null && tempToCheckBranch.instruction.isJump) {
+									if (tempToCheckBranch.branchtaken) {
+										workingInstruction.Issue(0);
+										workingInstruction.Read(0); // No Read
+										workingInstruction.Execute(0); // No execute Cycle
+										workingInstruction.Write(0); // No write Cycle
+										workingInstruction.stageType = StageType.WRITE;
+									} else {
+										workingInstruction.Issue(clockCycle);
+									}
+								} else {
+									workingInstruction.Issue(clockCycle);
+								}
+								
+							}
+
 						}
 
 					} else {
@@ -505,6 +536,26 @@ public class ScoreBoard {
 
 			System.out.println(
 					"************************************************************************************************************************");
+			
+			System.out.println(
+					"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			
+			for (HashMap.Entry<String, Integer> entry : variablesMap.entrySet()) {
+			    System.out.println("Key : "+ entry.getKey()+" --> "+ entry.getValue());
+			}
+			
+			System.out.println(
+					"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			
+			
+			System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+			
+			for (int data : dataList) {
+				System.out.println(data);
+			}
+			
+			System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+			
 
 		} while (!done);
 
@@ -526,6 +577,8 @@ public class ScoreBoard {
 		WriteToOutputFile(finishedInstructionList, filePathOutPut, instructionCacheAccessCount,
 				instructionCacheAccessCount - cacheController.iCacheMissCount, dataCacheAccessCount,
 				dataCacheAccessCount - cacheController.dCacheMissCount);
+		
+		WriteToDataFile(filePathData);
 
 		System.out.println("");
 		System.out.println("Data Cache Status");
@@ -540,6 +593,22 @@ public class ScoreBoard {
 
 		System.out.println("Instruction Cache Miss Count : "+cacheController.iCacheMissCount);
 		System.out.println("DAata Cache Miss Count : "+cacheController.dCacheMissCount);
+
+	}
+
+	private void WriteToDataFile(String filePathData) {		
+		try (BufferedWriter bw = new BufferedWriter(new FileWriter(filePathData))) {
+
+			for (Integer data : dataList) {
+				bw.write(Long.toBinaryString( Integer.toUnsignedLong(data) | 0x100000000L ).substring(1));
+				bw.newLine();
+
+			}
+		}catch (Exception e) {
+
+			e.printStackTrace();
+
+		}
 
 	}
 

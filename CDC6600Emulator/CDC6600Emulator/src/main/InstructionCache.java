@@ -49,7 +49,7 @@ public class InstructionCache {
 
 	public void GetInstructionBlock(int instructionId) {
 		clockCycleUsed += 1;
-		if (clockCycleUsed == clockCyclePerWordFetch * blockCount) {
+		if (clockCycleUsed == clockCyclePerWordFetch * blockSize) {
 			clockCycleUsed = 0;
 			int blockIndex = GetBlockIndex(instructionId);
 
